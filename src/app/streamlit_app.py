@@ -72,13 +72,29 @@ st.markdown("""
 def load_processed_data():
     """Load processed NVDB traffic data"""
     try:
-        processed_path = Path(__file__).resolve().parents[2] / "data" / "processed" / "traffic_insights_processed.csv"
-        df = pd.read_csv(processed_path)
-        df["date"] = pd.to_datetime(df["date"])
-        return df
-    except FileNotFoundError:
+        # Try multiple path configurations for local and Streamlit Cloud environments
+        base_paths = [
+            Path(__file__).resolve().parents[2],  # Local development
+            Path("."),  # Streamlit Cloud root
+            Path(__file__).resolve().parent.parent.parent,  # Alternative path
+        ]
+        
+        for base_path in base_paths:
+            processed_path = base_path / "data" / "processed" / "traffic_insights_processed.csv"
+            if processed_path.exists():
+                df = pd.read_csv(processed_path)
+                df["date"] = pd.to_datetime(df["date"])
+                st.success(f"✅ Data loaded from: {processed_path}")
+                return df
+        
+        # If no data file found, show error
         st.error("❌ Processed data not found. Please run: python -m src.analysis.prepare")
         st.info("💡 This will process the raw NVDB traffic data and generate analytics-ready metrics.")
+        return pd.DataFrame()
+        
+    except Exception as e:
+        st.error(f"❌ Error loading data: {str(e)}")
+        st.info("💡 Please ensure data processing is complete: python -m src.analysis.prepare")
         return pd.DataFrame()
 
 def create_covid_impact_analysis(df):
